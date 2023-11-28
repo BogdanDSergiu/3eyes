@@ -1,0 +1,20 @@
+meta:
+  name: Zimbra Mail
+  description: Detects Zimbra instances based on the response body.
+  version: 1.0
+  author: '@webglimpser'
+  update: https://wiki.zimbra.com/wiki/Zimbra_Releases
+  tested:
+    Zimbra : 10.0.5_GA_4574
+
+request:
+  url: /js/zimbraMail/share/model/ZmSettings.js
+  expected_status: ok
+  redirects: false  
+
+versions: 
+  - name: Zimbra
+    body:
+      match_string: "Zimbra Collaboration Suite Web Client"
+      extract_regex: '"CLIENT_VERSION",					{type:ZmSetting\.T_CONFIG, defaultValue:"([\w\d._]+)"'
+
