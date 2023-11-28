@@ -1,0 +1,29 @@
+meta:
+  name: Grafana
+  description: Detects Grafana instances based on the response body.
+  version: 0.1
+  author: '@webglimpser'
+  update: https://grafana.com/grafana/download
+  tested:
+    Grafana OSS : 10.2.0
+    Grafana Enterprise : 10.1.4
+
+versions:
+  - name: Grafana OSS
+    description: This version of Grafana is an open-source version that provides data visualization and monitoring tools with a wide range of data sources and visualization options.
+    body:
+      match_string: '"edition":"Open Source"' 
+      extract_regex: ',"version":"(\d+\.\d+\.\d+)","commit":"'
+      or_extract_regex: '","version":"(\d+\.\d+\.\d+)"}'
+
+  - name: Grafana Enterprise
+    description: This version of Grafana is a commercial version that provides additional features and support for enterprise-level use cases.
+    body:
+      match_string: '"edition":"Enterprise"'
+      extract_regex: ',"version":"(\d+\.\d+\.\d+)","commit":"'
+      or_extract_regex: '"version":"(\d+\.\d+\.\d+)"},"'
+
+
+
+
+

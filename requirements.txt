@@ -1,0 +1,5 @@
+yaml
+colorama
+httpx
+asyncio
+argparse

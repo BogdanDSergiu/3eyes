@@ -1,0 +1,17 @@
+meta:
+  name: Atlassian Jira
+  description: Detects Jira instances based on the response body.
+  version: 1.0
+  author: '@webglimpser'
+  update: https://www.atlassian.com/software/jira/update
+  tested:
+    Atlassian JIRA Project Management Software : 9.11.3
+
+request:
+  url: /secure/Dashboard.jspa
+
+versions: 
+  - name: Atlassian JIRA Project Management Software
+    body:
+      match_string: "Project Management Software"
+      extract_regex: 'data-version="([^"]+)"'
