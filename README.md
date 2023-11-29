@@ -18,15 +18,11 @@
 The framework is in its early stages and actively seeking optimization for scalability and new functionalities. Key areas in development include:
 
 - **Modularization:** Urgently required to enhance scalability for future features.
-- **CLI Enhancement:** Improving CLI aspects like color, text placement, and error messaging.
 - **Async Speed Optimization:** Enhancing asynchronous processing for improved performance.
 - **Module Creation Facilitation:** Updating the framework to assist in creating identification modules.
+- **CLI Enhancement:** Improving CLI aspects like color, text placement, and error messaging.
 
 **Note:** The YAML module is currently in active development and isn't open to community contributions in these early stages.
-
-## Usage
-
-To use the framework, follow the instructions in the repository. Be sure to review the license for usage terms and provide proper attribution.
 
 ## License
 

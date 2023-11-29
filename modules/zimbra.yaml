@@ -1,5 +1,5 @@
 meta:
-  name: Zimbra Mail
+  name: Zimbra Web Mail
   description: Detects Zimbra instances based on the response body.
   version: 1.0
   author: '@webglimpser'
