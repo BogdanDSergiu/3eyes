@@ -5,7 +5,7 @@ meta:
   author: AuthorName
   home: ModuleHomePage
   tested: # Latest version tested with specific applications
-    TestApplicationName: TestedVersion  # An example of tested application and its version
+    TestApplicationName: TestedVersion  # Example of a tested application and its version
 
 request:  # Optional section for request configuration
   method: RequestMethod  # HTTP request method (e.g., GET, POST)
