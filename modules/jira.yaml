@@ -1,7 +1,7 @@
 meta:
   name: Atlassian Jira
   description: Detects Jira instances based on the response body.
-  version: 1.0
+  version: 1.1
   author: '@webglimpser'
   update: https://www.atlassian.com/software/jira/update
   tested:
@@ -15,3 +15,9 @@ versions:
     body:
       match_string: "Project Management Software"
       extract_regex: 'data-version="([^"]+)"'
+
+arguments: 
+  - name: getHostInfo
+    description: Extracts information related to the domain name from the response body.
+    body:
+      extract_regex: '(https?:\/\/[^"]+)\/secure\/MyJiraHome.jspa'

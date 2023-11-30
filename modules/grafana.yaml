@@ -1,27 +1,45 @@
 meta:
   name: Grafana
   description: Detects Grafana instances based on the response body.
-  version: 0.1
+  version: 1.1
   author: '@webglimpser'
   update: https://grafana.com/grafana/download
   tested:
     Grafana OSS : 10.2.0
     Grafana Enterprise : 10.1.4
 
+request:
+  url: /login
+  expected_status: ok
+  redirects: false  
+
+server:
+  body:
+    match_string: 'href="public/build/grafana.dark.'
+
 versions:
   - name: Grafana OSS
     description: This version of Grafana is an open-source version that provides data visualization and monitoring tools with a wide range of data sources and visualization options.
     body:
-      match_string: '"edition":"Open Source"' 
-      extract_regex: ',"version":"(\d+\.\d+\.\d+)","commit":"'
-      or_extract_regex: '","version":"(\d+\.\d+\.\d+)"}'
+      match_string: '"edition":"Open Source"'
+      extract_any_regex:
+        - ',"version":"(\d+\.\d+\.\d+)","commit":"'
+        - '","version":"(\d+\.\d+\.\d+)"}'
 
   - name: Grafana Enterprise
     description: This version of Grafana is a commercial version that provides additional features and support for enterprise-level use cases.
     body:
       match_string: '"edition":"Enterprise"'
-      extract_regex: ',"version":"(\d+\.\d+\.\d+)","commit":"'
-      or_extract_regex: '"version":"(\d+\.\d+\.\d+)"},"'
+      extract_any_regex: 
+        - ',"version":"(\d+\.\d+\.\d+)","commit":"'
+        - '"version":"(\d+\.\d+\.\d+)"},"'
+
+arguments: 
+  - name: getHostInfo
+    description: Extracts information related to the domain name from the response body.
+    body:
+      extract_regex: '"appUrl":"(https?:\/\/[^"]+)"'
+
 
 
 
