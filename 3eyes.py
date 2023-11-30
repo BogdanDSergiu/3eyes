@@ -601,12 +601,3 @@ if __name__ == "__main__":
         asyncio.run(init())
     except KeyboardInterrupt:
         print("\n\nKeyboard interrupt detected")
-
-
-# cd /d "D:\Innotus\3eyes"
-# python 1.py -m grafana -t https://grafana.nhgh.org -v
-# python 1.py -m grafana -t https://grafana.nhgh.org -sm "Grafana Enterprise"
-
-# python 1.py -m jira -i ip.txt -cs -sa getHostInfo -so "{arg}: {url} | {ver}"
-# python 1.py -m jira -cs -so "{url} - {arg} | {ver}" -sa getHostInfo -t https://44.231.231.203/
-# python 1.py -m grafana -cs -so "{url} - {arg} | {ver}" -sa getHostInfo -i ip.txt
