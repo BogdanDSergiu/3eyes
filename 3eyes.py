@@ -30,11 +30,10 @@ get_text = {
         'input': "File path containing a list of target URLs.",
         'target': "URL intended for fingerprinting.",
         'check_versionsList': "Versions list for comparison.",
-        'set_outputString': "String format defining output presentation.",
-        'set_moduleversions': "Specified versions for target checking.",
-        'set_ModuleArguments': 'Specified the name of the extra argument logic.',
-        'set_timeOut': "Timeout specification for requests, default is 10s",
-        'verbose_mode': "Outputs valid URL(s) with extra details.",
+        'set_outputString': "Set output presentation, can be use with extra logic with {x.[arg name]}",
+        'set_moduleVersions': "Set specified versions for target checking.",
+        'set_timeOut': "Set timeout specification for requests, default is 10s",
+        'verbose_mode': "Outputs all URL(s), default is False",
         'serverCheck' : 'Check the server first, default is False',
         'moduleCheck' : 'Only check the yaml module without further execution, default is False '
     },
@@ -77,7 +76,7 @@ get_text = {
     },
     'aux': {
         'N\A': 'N\A',
-        'ver': 'v0.51 beta'
+        'ver': 'v0.52 beta'
     }
 }
 
@@ -147,16 +146,32 @@ async def get_specificInfo(name, in_TagName, yaml_file):
     print(get_text['error']['specific_InfoNotFound'].format(name=name, in_TagName=in_TagName))
     return False
 
-def _check_argsSO(value):
-    keys = re.findall(r'{(.*?)}', value)  # Extract keys within curly braces
-    predefined_keys = ['url', 'ver', 'name', 'descr', 'arg']
 
-    for key in keys:
-        if key not in predefined_keys:
-            raise argparse.ArgumentTypeError(get_text['error']['invalidOutputFormat'].format(value=value))
+async def _check_argsSO(value, get_YamlFile):
+    try:
+        pattern = r'\{x\.(\w+)}'  # Define the regex pattern
+        matches = re.findall(pattern, value)
 
-    return value
+        for match in matches:
+            check_match = await get_specificInfo(match, 'arguments', get_YamlFile)
+            if check_match:
+                new_string = value.replace(f'{{x.{match}}}', '')
+                if new_string.format(url=True, ver=True, name=True, descr=True):
+                    return {'string': value , 'name' : match, 'arg': check_match}
+        return 'Error'
+    
+    except KeyError:
+        print(3)
+        return 'Error'
 
+
+def _check_argsSO_BAK(value):
+    try:
+        value.format(url=True, ver=True, name=True, descr=True, arg=True)
+        return value
+    except KeyError:
+        raise argparse.ArgumentTypeError(get_text['error']['invalidOutputFormat'].format(value=value))
+    
 
 def _check_argsI(targets_file):
     try:
@@ -336,7 +351,7 @@ async def extract_any_regexHelper(extract_any_regex_yaml, response_body):
 
 async def check_versions(response, versions):
         response_body = response['body']
-        #print(type(versions))
+        #print(response_body)
         versions = [versions] if isinstance(versions, dict) else versions  # Convert single version to list
         try:
             for version in versions:
@@ -358,9 +373,10 @@ async def check_versions(response, versions):
                 #print(f'extract_match : {extract_match} | any_extract_regex {any_extract_regex}')
 
                 #print(f'match_string_yaml: {match_string_yaml} | match_regex_yaml: {match_regex_yaml}')
+
                 if match_string_yaml is None and match_regex_yaml is None: # if in the arguments tag
                     if extract_regex:
-                        return {'haveArg': True,'arg': extract_regex.group(1)}
+                        return {'haveArg': True,'result': extract_regex.group(1)}
                     else:
                         return {'haveArg': False}
                     
@@ -418,11 +434,22 @@ async def pre_check(request, yaml_file):
             return False
 
 
-async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_OutputFormat, set_arg = 'N/A'):
+async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_output = 'N/A', get_arg_result = 'N/A'):
 
-    default_outputFormat = get_text['info']['default_outputFormat'].format(url=result['url'] , name=result['name'], ver=result['ver'])
-    if set_OutputFormat:
-        default_outputFormat = set_OutputFormat.format(url=result['url'] , name=result['name'], descr=result['descr'], ver=result['ver'], arg=set_arg)
+    #set_output = {'string': value , 'name' : match, 'arg': check_match}
+
+    default_outputFormat = None
+
+    if not set_output == 'N/A':
+        pattern = r'\{x\.(\w+)}'  # Define the regex pattern
+        matches = re.findall(pattern, set_output['string'])
+
+        if matches:
+            new_output = set_output['string'].replace(f'{{x.{set_output["name"]}}}', get_arg_result)
+            #print(new_output)
+            default_outputFormat = new_output.format(url=result['url'] , name=result['name'], descr=result['descr'], ver=result['ver'])
+        else:
+            default_outputFormat = get_text['info']['default_outputFormat'].format(url=result['url'] , name=result['name'], ver=result['ver'])
 
     # PIPE MODE TEST
 
@@ -447,6 +474,7 @@ async def printFalse_basedOnMode(get_Target, verbose_mode, msg, url, index_url, 
 
 
 async def main(args, urls, start_time):
+    print('breakpoint4')
 
     noMatch_value = get_text['info']['noMatch']
     get_YamlFile = args.m
@@ -454,7 +482,8 @@ async def main(args, urls, start_time):
 
     verbose_mode = args.v
 
-    set_Arguments = args.sa
+#    set_OutputFormat = args.so['string']
+#    set_Arguments = args.so['arg']  
 
     total_urls = len(urls)
     succeeded_url = 0
@@ -488,15 +517,15 @@ async def main(args, urls, start_time):
                     if result['isMatch']: # eg: {'isMatch': True, 'url': '...', 'name': '...', 'descr': '...', 'ver': '...'}
                         checkVersion_value = False if args.cv and not result['ver'] in args.cv else None
 
-                        if checkVersion_value is None and set_Arguments:
-                            res = await check_versions(request, set_Arguments)
-                            if res['haveArg']: # {'haveArg': True,'arg': '...'}\
-                                await printTrue_basedOnMode(get_Target, result, index_url, total_urls, args.so, res['arg'])
+                        if checkVersion_value is None and args.so:
+                            res = await check_versions(request, args.so['arg'])
+                            if res['haveArg']: # {'haveArg': True,'result': '...'}
+                                await printTrue_basedOnMode(get_Target, result, index_url, total_urls, args.so, res['result'])
                                 successful_vers[result['ver']] += 1
 
-                        elif checkVersion_value is None and not set_Arguments:
+                        elif checkVersion_value is None and not args.so:
                             succeeded_url += 1
-                            await printTrue_basedOnMode(get_Target, result, index_url, total_urls, args.so)
+                            await printTrue_basedOnMode(get_Target, result, index_url, total_urls)
                             successful_vers[result['ver']] += 1
 
                         else:  # no checkVersion_value
@@ -528,29 +557,34 @@ async def init():
 
     if platform.system() == 'Windows': 
         just_fix_windows_console() # colors for win 10 cmd
+    print('breakpoint3')
 
     parser = argparse.ArgumentParser(description=get_text['arg']['description'])
-    parser.add_argument("-m", type=_check_argsM, required=True, help=get_text['arg']['module']) #+
-    parser.add_argument("-i", type=_check_argsI, help=get_text['arg']['input']) #+
 
+    group1 = parser.add_argument_group("Set Option")
+    group2 = parser.add_argument_group("Flags")
+
+    parser.add_argument("-m", type=_check_argsM, required=True, help=get_text['arg']['module']) 
+    parser.add_argument("-i", type=_check_argsI, help=get_text['arg']['input']) 
     parser.add_argument("-t", help=get_text['arg']['target'])
+    parser.add_argument("-cv", help=get_text['arg']['check_versionsList']) # sv ?
 
-    parser.add_argument("-sm", help=get_text['arg']['set_moduleversions']) #+
-    parser.add_argument("-so", type=_check_argsSO, help=get_text['arg']['set_outputString']) #+
-    parser.add_argument("-st", type=_check_argsST, default=10, help=get_text['arg']['set_timeOut']) #+
-    parser.add_argument("-sa", help=get_text['arg']['set_ModuleArguments'])
+    group1.add_argument("-sm", help=get_text['arg']['set_moduleVersions'])  
+    #group1.add_argument("-so", type=_check_argsSO, help=get_text['arg']['set_outputString']) 
+    group1.add_argument("-so", help=get_text['arg']['set_outputString']) 
     
-    parser.add_argument("-cv", help=get_text['arg']['check_versionsList'])
-    parser.add_argument("-cs", action='store_true', help=get_text['arg']['serverCheck'])
-    parser.add_argument("-cm", action='store_true', help=get_text['arg']['moduleCheck'])    
+    group1.add_argument("-st", type=_check_argsST, default=10, help=get_text['arg']['set_timeOut']) 
 
-    parser.add_argument("-v", action='store_true', help=get_text['arg']['verbose_mode'])
+    group2.add_argument("-cs", action='store_true', help=get_text['arg']['serverCheck'])
+    group2.add_argument("-cm", action='store_true', help=get_text['arg']['moduleCheck'])    
+    group2.add_argument("-v", action='store_true', help=get_text['arg']['verbose_mode'])
 
 
     args = parser.parse_args()
 
     urls = []
     get_YamlFile = args.m
+    get_OutputFormat = None
 
 
     if sys.stdin.isatty():
@@ -587,15 +621,18 @@ async def init():
         else:
             args.sm = 'Not Found'
 
-    if args.sa: 
-        get_argumentModule = await get_specificInfo(args.sa, 'arguments', get_YamlFile)
-        if get_argumentModule:
-            args.sa = get_argumentModule
-        else:
-            args.sa = 'Not Found'
+    # if args.sa: 
+    #     get_argumentModule = await get_specificInfo(args.sa, 'arguments', get_YamlFile)
+    #     if get_argumentModule:
+    #         args.sa = get_argumentModule
+    #     else:
+    #         args.sa = 'Not Found'
+
+    if args.so:
+        args.so = await _check_argsSO(args.so, get_YamlFile)
 
 
-    if urls and get_YamlFile and not args.sm == 'Not Found' and not args.sa == 'Not Found':
+    if urls and get_YamlFile and not args.sm == 'Not Found' and not args.so == 'Error':
         await main(args, urls, start_time)
 
 
