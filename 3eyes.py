@@ -158,6 +158,7 @@ async def _check_argsSO(value, get_YamlFile):
                 new_string = value.replace(f'{{x.{match}}}', '')
                 if new_string.format(url=True, ver=True, name=True, descr=True):
                     return {'string': value , 'name' : match, 'arg': check_match}
+        # if not value.format(url=True, ver=True, name=True, descr=True): #TO-DO: simple output
         return 'Error'
     
     except KeyError:
@@ -202,7 +203,7 @@ def _check_argsM(module_name):
         raise argparse.ArgumentTypeError(get_text['error']['moduleFileNotFound'].format(value=module_name))
 
 
-async def return_validURL(url):
+def return_validURL(url):
     return url.strip() != "" and " " not in url
 
 async def print_starting_info(module_name, banner):
@@ -262,7 +263,7 @@ async def perform_request(url, timeout,  method='GET', yaml_dir='', follow_redir
 
             if response_code:
                 if response.status_code == response_code or response_code.lower() == 'ok':
-                    return {'isOk': True,'url': normal_urlFormat,'body': response.text}
+                    return {'isOk': True,'url': normal_urlFormat,'body': response.text, 'headers': response.headers}
                 
                 elif not response.status_code == response_code:
                     return {'isOk': False, 'url': normal_urlFormat, 'msg': get_text['info']['statusCode']}
@@ -288,6 +289,7 @@ async def perform_request(url, timeout,  method='GET', yaml_dir='', follow_redir
         return {'isOk': False, 'url': normal_urlFormat, 'msg': f'HTTPError:{e}'}
     
     except KeyboardInterrupt:
+        # print(.....)
         client.close() # it will bubble up in 'asyncio.run(main())'
 
 async def print_bar(index, total, prt = None): 
@@ -315,8 +317,8 @@ async def extract_any_regexHelper(extract_any_regex_yaml, response_body):
 
 
 async def check_versions(response, versions):
-        response_body = response['body']
-        #print(response_body)
+        response_info = response['body']
+        #print(response_info)
         versions = [versions] if isinstance(versions, dict) else versions  # Convert single version to list
         try:
             for version in versions:
@@ -328,11 +330,11 @@ async def check_versions(response, versions):
                 extract_any_regex_yaml = version['body'].get('extract_any_regex', None)
 
 
-                match_string = bool(match_string_yaml) and match_string_yaml in response_body
-                match_regex = re.search(match_regex_yaml, response_body) if match_regex_yaml else None
+                match_string = bool(match_string_yaml) and match_string_yaml in response_info
+                match_regex = re.search(match_regex_yaml, response_info) if match_regex_yaml else None
 
-                extract_regex = re.search(extract_regex_yaml, response_body) if extract_regex_yaml else None
-                any_extract_regex = await extract_any_regexHelper(extract_any_regex_yaml, response_body)
+                extract_regex = re.search(extract_regex_yaml, response_info) if extract_regex_yaml else None
+                any_extract_regex = await extract_any_regexHelper(extract_any_regex_yaml, response_info)
 
                 #print(f'match_string : {match_string} | match_regex : {match_regex}, extract_regex : {extract_regex}')
                 #print(f'extract_match : {extract_match} | any_extract_regex {any_extract_regex}')
@@ -341,7 +343,7 @@ async def check_versions(response, versions):
 
                 if match_string_yaml is None and match_regex_yaml is None: # if in the arguments tag
                     if extract_regex:
-                        return {'haveArg': True,'result': extract_regex.group(1)}
+                        return {'haveArg': True,'result': extract_regex.group(1), 'ver_name': version['name']}
                     else:
                         return {'haveArg': False}
                     
@@ -380,10 +382,8 @@ async def check_versions(response, versions):
             }
             
         except TypeError as te: # TO-DO: rewrite it with return error and let it handle in the main(), update the get_Text[]
-            if str(te) == "unhashable type: 'list'":
-                print(f"Error in '{version['name']}' config: a tag is threated like a list, but it is not!")
-            else:
-                print(f"Error in '{version['name']}': {te}")
+            print(f"Error in '{version['name']}': {te}")
+
 
 
 async def pre_check(request, yaml_file):
@@ -422,7 +422,6 @@ async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_o
         await print_bar(index_url, total_urls, default_outputFormat)
         
 
-
 async def printFalse_basedOnMode(get_Target, verbose_mode, msg, url, index_url, total_urls):
     if get_Target:
         print(get_text['info']['targetNotFound'].format(msg=msg, url=url))
@@ -434,8 +433,50 @@ async def printFalse_basedOnMode(get_Target, verbose_mode, msg, url, index_url, 
         await print_bar(index_url, total_urls, get_text['info']['targetNotFound'].format(msg=msg, url=url))
 
 
-
 async def print_execution_info(execution_time, error_messages, successful_vers):
+
+    failed_url = sum(error_messages.values())
+    succeeded_url = sum(sum(version_counts.values()) for version_counts in successful_vers.values())
+
+    index_url = failed_url + succeeded_url
+
+    success_percentage = (succeeded_url / index_url) * 100 if index_url != 0 else 0
+    failure_percentage = (failed_url / index_url) * 100 if index_url != 0 else 0
+
+    max_len = len(str(index_url))
+
+    max_key_length = max(len(key) for key in successful_vers.keys()) # check  if not zero 
+    adjusted_length = max_key_length + 3
+
+    normal_line = '{:<'+ str(adjusted_length+4) +'} {:>'+ str(max_len+1) +'}'
+    percent_line = '{:<'+ str(adjusted_length+4) +'} {:>'+ str(max_len+1) +'} {:>1}'
+    
+    single_word = '{:<20}'
+
+    print('\n\x1b[38;5;243m')
+
+    print('[+] Percentages based on total URLs.')
+    print(normal_line.format('[-] Execution time:', str(round(execution_time, 2)) + ' sec'))
+    print(normal_line.format('[-] Total:', index_url))
+    print(percent_line.format('[-] Succeed:', succeeded_url, str(round(success_percentage, 2)) + '%'))
+
+    if successful_vers:
+        for version_name, version_counts in successful_vers.items():
+            print(single_word.format(f"    └─ {version_name}:"))
+            for version, count in version_counts.items():
+                version_percentage = (count / index_url) * 100 if index_url != 0 else 0
+                print(percent_line.format(f"        └─ {version}:", count, f"{round(version_percentage, 2)}%"))
+
+    print(percent_line.format('[-] Fail:', failed_url, str(round(failure_percentage, 2)) + '%'))
+    if error_messages:
+        for error_msg, count in error_messages.items():
+            error_percentage = (count / index_url) * 100 if index_url != 0 else 0
+            print(percent_line.format('    └─ ' + error_msg + ':', count, str(round(error_percentage, 2)) + '%'))
+
+    print('\x1b[39m')
+
+
+async def print_execution_infoBAK(execution_time, error_messages, successful_vers):
     failed_url = sum(error_messages.values())
     succeeded_url = sum(successful_vers.values())
     index_url = failed_url + succeeded_url
@@ -472,24 +513,24 @@ async def process_data(request, index_url, urls, args):
     verbose_mode = args.v
 
     total_urls = len(urls)
-    succeeded_url = 0
 
     if not request['isOk']:
         await printFalse_basedOnMode(get_Target, verbose_mode, request['msg'], request['url'], index_url, total_urls)
         return {'status':False, 'msg': request['msg']}
 
-    # now the request['isOk'] is True, eg format: {'isOk': True,'url': url,'body': '...'}
+    # now the request['isOk'] is True, eg format: {'isOk': True, 'url': '....','body': '...', 'headers': '...'}
 
     if args.cs and 'server' in get_YamlFile:
         if not await pre_check(request, get_YamlFile):
             await printFalse_basedOnMode(get_Target, verbose_mode, noMatch_value, request['url'], index_url, total_urls)
             return {'status':False, 'msg': noMatch_value}
 
+
     search_tasks = [check_versions(request, args.sm or get_YamlFile['versions'])] 
     for completed_task in asyncio.as_completed(search_tasks):
         result = await completed_task
-
-        if not result['isMatch']:
+        
+        if not result['isMatch']: #TO-DO: if a error in module, stop here
             await printFalse_basedOnMode(get_Target, verbose_mode, noMatch_value, result['url'], index_url, total_urls)
             return {'status':False, 'msg': noMatch_value}
 
@@ -503,38 +544,42 @@ async def process_data(request, index_url, urls, args):
 
         if args.so:
             res = await check_versions(request, args.so['arg'])
-            if res['haveArg']: # {'haveArg': True,'result': '...'}
+            if res['haveArg']: # {'haveArg': True,'result': extract_regex.group(1), 'ver_name': version['name']}
                 await printTrue_basedOnMode(get_Target, result, index_url, total_urls, args.so, res['result'])
-                return {'status' : True, 'msg': result['ver']}
-
+                return {'status' : True, 'msg': result['ver'], 'ver_name': result['name']}
+            
         if not args.so:
-            succeeded_url += 1
             await printTrue_basedOnMode(get_Target, result, index_url, total_urls)
-            return {'status' : True, 'msg': result['ver']}
+            return {'status' : True, 'msg': result['ver'], 'ver_name' : result['name']}
 
 
 
 
 async def main(args, urls, start_time):
-    print('breakpoint4')
 
     index_urlNumber = 0
     get_YamlFile = args.m
 
     error_messages = defaultdict(int)
-    successful_vers = defaultdict(int)
+    successful_vers = {}
 
     await print_starting_info(get_YamlFile["meta"], banner)
 
     async for request in fetch_responses(urls, get_YamlFile.get('request'), args.st): 
         index_urlNumber += 1
         get_data = await process_data(request, index_urlNumber, urls, args)
-        if get_data['status']:
-            successful_vers[get_data['msg']] += 1
+        if get_data is not None and get_data['status']:
+            # {'status' : True, 'msg': '....', 'ver_name': '.....'}
+            successful_vers.setdefault(get_data['ver_name'], {})
+            successful_vers[get_data['ver_name']][get_data['msg']] = successful_vers[get_data['ver_name']].get(get_data['msg'], 0) + 1
+
+            # print(successful_vers) | {'Grafana OSS': {'7.4.3': 1}}
+        elif get_data is None:
+            error_messages['AppError'] += 1
         else:
             error_messages[get_data['msg']] += 1
 
-    if not args.t:
+    if not args.t: # and not error_messages['AppError']:
         end_time = time.time()
         exec_time = end_time - start_time
         await print_execution_info(exec_time, error_messages, successful_vers)
@@ -543,12 +588,10 @@ async def main(args, urls, start_time):
 
 
 async def init():
-    print('breakpoint2')
     start_time = time.time()
 
     if platform.system() == 'Windows': 
         just_fix_windows_console() # colors for win 10 cmd
-    print('breakpoint3')
 
     parser = argparse.ArgumentParser(description=get_text['arg']['description'])
 
@@ -569,13 +612,10 @@ async def init():
     group2.add_argument("-cm", action='store_true', help=get_text['arg']['moduleCheck'])    
     group2.add_argument("-v", action='store_true', help=get_text['arg']['verbose_mode'])
 
-
     args = parser.parse_args()
 
     urls = []
     get_YamlFile = args.m
-    get_OutputFormat = None
-
 
     if sys.stdin.isatty():
         # Terminal mode
@@ -617,13 +657,13 @@ async def init():
 
     if urls and get_YamlFile and not args.sm == 'Not Found' and not args.so == 'Error':
         await main(args, urls, start_time)
+    else:
+        print(111)
 
 
 
 if __name__ == "__main__":
-    print('breakpoint1')
     try:
-        print('breakpoint11')
         asyncio.run(init())
     except KeyboardInterrupt:
         print("\n\nKeyboard interrupt detected")
