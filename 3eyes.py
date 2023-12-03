@@ -726,8 +726,8 @@ async def init():
 
     if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error':
         await main(args, urls, start_time, new_ouput_format)
-    else:
-        print('no init() pass')
+    # else:
+    #     print('no init() pass')
 
 
 
