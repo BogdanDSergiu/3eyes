@@ -1,4 +1,3 @@
-tps://www.google.com
 https://www.amazon.com
 https://www.facebook.com
 https://www.youtube.com
@@ -26,7 +25,6 @@ https://www.target.com
 https://www.bestbuy.com
 https://www.stackoverflow.com
 https://www.nike.com
-www.adidas.com
 https://www.zara.com
 https://www.forbes.com
 https://www.cnet.com
@@ -34,7 +32,6 @@ https://www.reddit.com/r/all
 https://www.apple.com/itunes
 https://www.playstation.com
 https://www.xbox.com
-https://www.tesla.com
 https://www.paypal.com
 https://www.booking.com
 https://www.airbnb.com
@@ -91,7 +88,6 @@ https://www.facebook.com
 http://httpbin.org/delay/6
 https://www.ebay.com
 http://httpbin.org/delay/8
-https://www.microsoft.com
 https://grafana.ft.com/
 https://jira.se.com
 https://www.paypal.com

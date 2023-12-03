@@ -24,24 +24,29 @@ python 3eyes.py -m grafana -t https://localhost -cv "7.4.0 7.4.1 7.4.2"
 ```
 python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with {{name}} v{{ver}}"
 ```
-*Note: valid arguments are {{url}}, {{name}}, {{descr}} and {{ver}}*
+**Note:** *valid arguments are {{url}}, {{name}}, {{descr}} and {{ver}}*
 
 - Adding extra logic by executing the argument tags (representative by 'x.' at the start): 
 ```
 python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with host info {{x.getHostInfo}}"
 ```
-- Utilizing the -i argument (for inputting a bulk file with targets) will result in the generation of a summary
+- Utilizing the -i argument (for inputting a bulk file with targets) will result in the generation of a summary:
 ```
+python 3eyes.py -m grafana -i url_examples.txt
+```
+Output:
+```
+(...)
+
 [+] Percentages based on total URLs.
-[-] Execution time: 3.17 sec
+[-] Execution time: 3.2 sec
 [-] Total:          96
 [-] Succeed:         2 2.08%
     └─ Grafana OSS: 2.08%
         └─ 7.4.3:    1 1.04%
         └─ 8.4.6:    1 1.04%
 [-] Fail:           94 97.92%
-    └─ Protocol:     1 1.04%
-    └─ StatusCode:  83 86.46%
+    └─ StatusCode:  84 87.5%
     └─ NoMatch:     10 10.42%
 ```
 
