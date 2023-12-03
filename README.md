@@ -10,23 +10,23 @@
 
 - **Examples:**
 
-Checking for a specific instance: 
+- Checking for a specific instance: 
 ```
 python 3eyes.py -m grafana -t https://localhost -sm "Grafana Enterprise" 
 ```
 
-Checking for a specific version: 
+- Checking for a specific version: 
 ```
 python 3eyes.py -m grafana -t https://localhost -cv "7.4.0 7.4.1 7.4.2" 
 ```
 
-Setting the global output: 
+- Setting the global output: 
 ```
 python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with {{name}} v{{ver}}"
 ```
-Note: valid arguments are {{url}}, {{name}}, {{descr}} and {{ver}}
+*Note: valid arguments are **{{url}}**, **{{name}}**, **{{descr}}** and **{{ver}}** *
 
-Adding extra logic by executing the argument tags (representative by 'x.' at the start): 
+- Adding extra logic by executing the argument tags (representative by 'x.' at the start): 
 ```
 python 3eyes.py -m grafana -t https://localhost -so "{{url}} with host info {{x.getHostInfo}}"
 ```
