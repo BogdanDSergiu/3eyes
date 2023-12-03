@@ -72,7 +72,7 @@ get_text = {
         'statusCode': 'StatusCode',
         'networkError': 'NetworkError',
         'protocol': 'Protocol',
-        'default_outputFormat': "\x1b[32m[-] Found\x1b[39m: {url} : '{name}' v{ver}"
+        'default_outputFormat': "\x1b[32m[-] Found\x1b[39m: {{url}} : '{{name}}' v{{ver}}"
     },
     'aux': {
         'N\A': 'N\A',
