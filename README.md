@@ -1,28 +1,32 @@
 # 3Eyes Framework
 
-3Eyes is an asynchronous web identification python framework, primarily designed to identify web instances and their versions using YAML-based fingerprinting. It offers three modes: normal, verbose, and silent, catering to different output preferences. The framework allows users to check specific versions, customize output formats, and can accept or pipe information to other applications.
+3Eyes is a community based asynchronous web identification python framework, primarily designed to identify web instances and their versions using YAML-based fingerprinting. It offers two modes: normal, verbose, catering to different output preferences. The framework allows users to check specific versions, customize output formats, and can accept from other applications.
 
 ## Features
 
 - **Identification Modes:**
   - *Normal Mode:* Shows valid URLs only.
   - *Verbose Mode:* Displays all URLs, valid or invalid.
-  - *Silent Mode:* Outputs only URLs, ideal for piping information.
 
-- **Customizable Output:** Tailor the output using tags like `{url}`, `{name}`, `{ver}`, `{descr}`.
+- **Examples:**
+Checking for a specific instance: `python 3eyes.py -m grafana -t https://localhost -sm "Grafana Enterprise" `
+Checking for a specific version: `python 3eyes.py -m grafana -t https://localhost -cv "7.4.0 7.4.1 7.4.2" `
 
-- **YAML Module Support:** Check specific or multiple versions specified by the user in YAML format.
+Setting the global output: `python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with {{name}} v{{ver}}"`
+Note: valid arguments are {{url}}, {{name}}, {{descr}} and {{ver}}
+
+Adding extra logic by executing the argument tags (representative by 'x.' at the start): `python 3eyes.py -m grafana -t https://localhost -so "{{url}} with host info {{x.getHostInfo}}"`
 
 ## Roadmap
 
 The framework is in its early stages and actively seeking optimization for scalability and new functionalities. Key areas in development include:
 
-- **Modularization:** Urgently required to enhance scalability for future features.
+- **Modularization:** Required to enhance scalability for future features.
 - **Async Speed Optimization:** Enhancing asynchronous processing for improved performance.
 - **Module Creation Facilitation:** Updating the framework to assist in creating identification modules.
 - **CLI Enhancement:** Improving CLI aspects like color, text placement, and error messaging.
 
-**Note:** The YAML module is currently in active development and isn't open to community contributions in these early stages.
+**Note:** The YAML module logic is currently in active development and isn't open to community contributions in these early stages.
 
 ## License
 

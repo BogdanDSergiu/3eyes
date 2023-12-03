@@ -326,7 +326,6 @@ async def check_versions(response, versions): #check_versions(request, args.so['
         versions = [versions] if isinstance(versions, dict) else versions  # Convert single version to list
         try:
             for version in versions:
-                
                 match_string_yaml = version['body'].get('match_string')
                 match_regex_yaml = version['body'].get('match_regex')
 
@@ -605,7 +604,7 @@ async def process_data(request, index_url, urls, args, new_ouput_format = None, 
 
         # now result['isMatch'] is True, eg format: {'isMatch': True, 'url': '...', 'name': '...', 'descr': '...', 'ver': '...'}
 
-        if args.cv and not result['ver']:
+        if args.cv and not result['ver'] in args.cv:
             await printFalse_basedOnMode(get_Target, verbose_mode, 'NoVerMatch', result['url'], index_url, total_urls)
             return {'status':False, 'msg': 'NoVerMatch'}
 
@@ -716,8 +715,8 @@ async def init():
 
     if args.sm: 
         get_versionModule = await get_specificInfo(args.sm, 'versions', get_YamlFile)
-        if get_versionModule:
-            args.sm = get_versionModule
+        if get_versionModule['isOk']:
+            args.sm = get_versionModule['getYaml']
         else:
             args.sm = 'Not Found'
 
@@ -727,8 +726,8 @@ async def init():
 
     if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error':
         await main(args, urls, start_time, new_ouput_format)
-    # # else:
-    # #     print('no init() pass')
+    else:
+        print('no init() pass')
 
 
 
