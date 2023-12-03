@@ -24,7 +24,7 @@ python 3eyes.py -m grafana -t https://localhost -cv "7.4.0 7.4.1 7.4.2"
 ```
 python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with {{name}} v{{ver}}"
 ```
-*Note: valid arguments are **{{url}}**, **{{name}}**, **{{descr}}** and **{{ver}}** *
+*Note: valid arguments are {{url}}, {{name}}, {{descr}} and {{ver}}*
 
 - Adding extra logic by executing the argument tags (representative by 'x.' at the start): 
 ```
