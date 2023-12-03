@@ -1,6 +1,6 @@
 # 3Eyes Framework
 
-3Eyes is a community based asynchronous web identification python framework, primarily designed to identify web instances and their versions using YAML-based fingerprinting. It offers two modes: normal, verbose, catering to different output preferences. The framework allows users to check specific versions, customize output formats, and can accept from other applications.
+3Eyes is a community based asynchronous web identification python framework, primarily designed to identify web instances and their versions using YAML-based fingerprinting. It offers two modes: normal, verbose, catering to different output preferences. The framework allows users to check specific versions, customize output formats, and can accept input from other applications.
 
 ## Features
 
