@@ -28,7 +28,7 @@ python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with {{name}}
 
 - Adding extra logic by executing the argument tags (representative by 'x.' at the start): 
 ```
-python 3eyes.py -m grafana -t https://localhost -so "{{url}} with host info {{x.getHostInfo}}"
+python 3eyes.py -m grafana -t https://localhost -so "found {{url}} with host info {{x.getHostInfo}}"
 ```
 - Utilizing the -i argument (for inputting a bulk file with targets) will result in the generation of a summary
 ```
