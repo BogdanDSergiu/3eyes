@@ -411,14 +411,13 @@ async def prepare_output_format(value, get_YamlFile):
     matches = re.findall(r'\{{(\w+?)}}', new_value)
     is_string_valid = False if [arg for arg in matches if arg not in valid_args] else True
 
-
     if is_string_valid:
-
         matches = re.findall(regex_pattern, value)
 
         for arg_name in matches:
             get_arg_info = await get_specificInfo(arg_name, 'arguments', get_YamlFile) 
             if get_arg_info['isOk']: # {'isOk' : True, 'getYaml' : yaml_name}
+                print(421)
 
                 extract_regex = get_arg_info['getYaml']['body'].get('extract_regex', None)
                 if extract_regex:
@@ -433,18 +432,13 @@ async def prepare_output_format(value, get_YamlFile):
                 
         return {
             'string': value,
-            'need_request': False if not need_request else need_request, 
-            'have_extra': False if not have_extra else have_extra,
+            'need_request': False if not matches or not need_request else need_request, 
+            'have_extra': False if not matches or not have_extra else have_extra,
             }
     
     else:
         print('exp')
         return 'Error'
-
-    # {'string': '{{url}} {{x.getHostInfo}} {{x.aa}} ', 'need_request': {'getHostInfo': [{'url': '/secure/Dashboard.jspa'}]}, 'have_extra': {'getHostInfo': ['"appUrl":"(https?:\\/\\/[^"]+)"'], 'aa': ['"appUrl":"(https?:\\/\\/[^"]+)"']}}
-
-# {'string': '{{url}} {{x.getHostInfo}} {{x.aa}} ', 'need_request': {'getHostInfo': [{'url': '/secure/Dashboard.jspa'}]}, ....
-#--- 'have_extra': {'getHostInfo': ['"appUrl":"(https?:\\/\\/[^"]+)"'], 'aa': ['"appUrl":"(https?:\\/\\/[^"]+)"']}}
 
 async def extract_arg_regexHelper(result_dict, response_body, url, timeout):
     get_need_request = result_dict['need_request']
@@ -480,20 +474,13 @@ async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_o
 
             for name, value in set_output['have_extra'].items():
                 new_output = re.sub(f'{{{{x.{name}}}}}', value, new_output)
-                #print(f'name: {name}, new_output: {new_output}')
             string_output = new_output
             
         else:
             string_output = set_output['string']
-        string_output = re.sub(r'\{(\{.*?\})\}', r'\1', string_output)
 
+    outputFormat = re.sub(r'\{{(\w+?)}}', lambda match: result[match.group(1)], string_output)
 
-    outputFormat = string_output.format(
-        url=result['url'],
-        name=result['name'],
-        descr=result['descr'],
-        ver=result['ver']
-    ) 
              
     if get_Target: 
         print(outputFormat)
@@ -586,8 +573,6 @@ def print_execution_info(execution_time, error_messages, successful_vers):
 
 ################## The resume end ###############
 
-def test(value):
-    print(value)
 
 async def process_data(request, index_url, urls, args, new_ouput_format = None, timeout = 10):
     noMatch_value = get_text['info']['noMatch']
@@ -631,7 +616,7 @@ async def process_data(request, index_url, urls, args, new_ouput_format = None, 
             if new_ouput_format['have_extra']:
                 res = await extract_arg_regexHelper(new_ouput_format, request['body'], result['url'], timeout)
 
-            await printTrue_basedOnMode(get_Target, result, index_url, total_urls, res)
+            await printTrue_basedOnMode(get_Target, result, index_url, total_urls, res or new_ouput_format)
             return {'status' : True, 'msg': result['ver'], 'ver_name': result['name']}
             
         if not args.so:
