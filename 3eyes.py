@@ -204,7 +204,6 @@ async def fetch_responses(urls, yaml_serverModule, timeout):
             yaml_serverModule.get('post_data', None),
             yaml_serverModule.get('headers', None)
         ]
-
     fetch_tasks = [
         asyncio.create_task(
             perform_request(url, timeout, *yaml_serverArgs)
@@ -399,71 +398,103 @@ async def pre_check(request, yaml_file):
             return False
 
 
+    
+async def prepare_output_format(value, get_YamlFile):
+    have_extra = {}  
+    need_request = {}
 
-async def _check_argsSO(value, get_YamlFile):
-    try:
-        pattern = r'\{x\.(\w+)}'  # Define the regex pattern
-        matches = re.findall(pattern, value)
+    valid_args = ['url', 'name', 'descr', 'ver']
+    regex_pattern = r'\{{x\.(\w+)}}'  
 
-        result = {}
+    new_value = re.sub(regex_pattern, '', value)
 
-        for match in matches:
-            check_match = await get_specificInfo(match, 'arguments', get_YamlFile) # {'isOk' : True, 'getYaml' : yaml_name}
-            if check_match['isOk']:
-                new_value = value
-                new_value = new_value.replace(f'{{x.{match}}}', '')  # Update value without the matched pattern
-                extract_regex = check_match['getYaml']['body'].get('extract_regex')
+    matches = re.findall(r'\{{(\w+?)}}', new_value)
+    is_string_valid = False if [arg for arg in matches if arg not in valid_args] else True
 
-                result[match] = [extract_regex] if extract_regex else ['N/A']
+
+    if is_string_valid:
+
+        matches = re.findall(regex_pattern, value)
+
+        for arg_name in matches:
+            get_arg_info = await get_specificInfo(arg_name, 'arguments', get_YamlFile) 
+            if get_arg_info['isOk']: # {'isOk' : True, 'getYaml' : yaml_name}
+
+                extract_regex = get_arg_info['getYaml']['body'].get('extract_regex', None)
+                if extract_regex:
+                    have_extra[arg_name] = [extract_regex] if extract_regex else ['N/A']
+
+                extract_request = get_arg_info['getYaml'].get('request', None)
+                if extract_request:
+                    need_request[arg_name] = [extract_request]
             else:
                 return 'Error'
 
-        if result:
-            return {'string': value, 'have_extra': True, 'result': result}
-        else:
-            return {'string': value, 'have_extra': False}
-
-    except KeyError:
-        return 'Error'
+                
+        return {
+            'string': value,
+            'need_request': False if not need_request else need_request, 
+            'have_extra': False if not have_extra else have_extra,
+            }
     
+    else:
+        print('exp')
+        return 'Error'
 
+    # {'string': '{{url}} {{x.getHostInfo}} {{x.aa}} ', 'need_request': {'getHostInfo': [{'url': '/secure/Dashboard.jspa'}]}, 'have_extra': {'getHostInfo': ['"appUrl":"(https?:\\/\\/[^"]+)"'], 'aa': ['"appUrl":"(https?:\\/\\/[^"]+)"']}}
 
-async def extract_arg_regexHelper(result_dict, response_body):
+# {'string': '{{url}} {{x.getHostInfo}} {{x.aa}} ', 'need_request': {'getHostInfo': [{'url': '/secure/Dashboard.jspa'}]}, ....
+#--- 'have_extra': {'getHostInfo': ['"appUrl":"(https?:\\/\\/[^"]+)"'], 'aa': ['"appUrl":"(https?:\\/\\/[^"]+)"']}}
+
+async def extract_arg_regexHelper(result_dict, response_body, url, timeout):
+    get_need_request = result_dict['need_request']
+
     result = {}
+    for arg_name, regex_value in result_dict['have_extra'].items():
 
-    for arg_name, regex_value in result_dict.items():  
-        for regex in regex_value:
-            check_extract = re.search(regex, response_body)
-            if check_extract:
-                result[arg_name] = check_extract.group(1)  
-            else:
-                result[arg_name] = 'N/A'  
+        check_extract = None
+        
+        if get_need_request and get_need_request.get(arg_name, None):
 
-    return result
+            async for get_request in fetch_responses([url], get_need_request.get(arg_name)[0], timeout): 
+                if get_request['isOk']:
+                    check_extract = re.search(regex_value[0], get_request['body'])
+
+                else:
+                    print('request not ok')
+        else:
+            check_extract = re.search(regex_value[0], response_body)
+
+        result[arg_name] = check_extract.group(1) if check_extract else 'N/A'
+    
+    return {'string': result_dict['string'] , 'have_extra': result}
 
 
-
-async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_output = False , get_arg_result = False):
+async def printTrue_basedOnMode(get_Target, result, index_url, total_urls, set_output = False):
 
     string_output = get_text['info']['default_outputFormat']
     
     if set_output:
-        if set_output['have_extra']:
+        if set_output.get('have_extra', False):
             new_output = set_output['string']
 
-            for name, value in get_arg_result.items():  # Use .items() to iterate over key-value pairs
-                new_output = new_output.replace(f'{{x.{name}}}', value)
+            for name, value in set_output['have_extra'].items():
+                new_output = re.sub(f'{{{{x.{name}}}}}', value, new_output)
+                #print(f'name: {name}, new_output: {new_output}')
             string_output = new_output
+            
         else:
             string_output = set_output['string']
+        string_output = re.sub(r'\{(\{.*?\})\}', r'\1', string_output)
+
 
     outputFormat = string_output.format(
         url=result['url'],
         name=result['name'],
         descr=result['descr'],
         ver=result['ver']
-    )            
-    
+    ) 
+             
     if get_Target: 
         print(outputFormat)
     else:
@@ -555,8 +586,10 @@ def print_execution_info(execution_time, error_messages, successful_vers):
 
 ################## The resume end ###############
 
+def test(value):
+    print(value)
 
-async def process_data(request, index_url, urls, args):
+async def process_data(request, index_url, urls, args, new_ouput_format = None, timeout = 10):
     noMatch_value = get_text['info']['noMatch']
     get_YamlFile = args.m
     get_Target = args.t
@@ -593,12 +626,12 @@ async def process_data(request, index_url, urls, args):
 
         # now result['ver'] is ok
 
-        if args.so: 
+        if args.so: # {'string': '{{url}}', 'need_request': False, 'have_extra': False}
             res = False
-            if args.so['have_extra']:
-                res = await extract_arg_regexHelper(args.so['result'], request['body'])
+            if new_ouput_format['have_extra']:
+                res = await extract_arg_regexHelper(new_ouput_format, request['body'], result['url'], timeout)
 
-            await printTrue_basedOnMode(get_Target, result, index_url, total_urls, args.so, res)
+            await printTrue_basedOnMode(get_Target, result, index_url, total_urls, res)
             return {'status' : True, 'msg': result['ver'], 'ver_name': result['name']}
             
         if not args.so:
@@ -606,7 +639,7 @@ async def process_data(request, index_url, urls, args):
             return {'status' : True, 'msg': result['ver'], 'ver_name' : result['name']}
 
 
-async def main(args, urls, start_time):
+async def main(args, urls, start_time, new_ouput_format):
 
     index_urlNumber = 0
     get_YamlFile = args.m
@@ -618,7 +651,7 @@ async def main(args, urls, start_time):
 
     async for request in fetch_responses(urls, get_YamlFile.get('request'), args.st): 
         index_urlNumber += 1
-        get_data = await process_data(request, index_urlNumber, urls, args)
+        get_data = await process_data(request, index_urlNumber, urls, args, new_ouput_format, args.st)
         if get_data is not None and get_data['status']:
             # {'status' : True, 'msg': '....', 'ver_name': '.....'}
             successful_vers.setdefault(get_data['ver_name'], {})
@@ -666,6 +699,7 @@ async def init():
     args = parser.parse_args()
 
     urls = []
+    new_ouput_format = None
     get_YamlFile = args.m
 
     if sys.stdin.isatty():
@@ -703,13 +737,13 @@ async def init():
             args.sm = 'Not Found'
 
     if args.so:
-        args.so = await _check_argsSO(args.so, get_YamlFile)
+        new_ouput_format = await prepare_output_format(args.so, get_YamlFile)
 
 
-    if urls and get_YamlFile and not args.sm == 'Not Found' and not args.so == 'Error':
-        await main(args, urls, start_time)
-    # else:
-    #     print('no init() pass')
+    if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error':
+        await main(args, urls, start_time, new_ouput_format)
+    # # else:
+    # #     print('no init() pass')
 
 
 
