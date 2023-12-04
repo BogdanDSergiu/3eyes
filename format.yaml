@@ -1,0 +1,40 @@
+meta:
+  name: ModuleName
+  description: ModuleDescription
+  version: 1.0  # Mandatory: Version of the module
+  author: AuthorName
+  home: ModuleHomePage
+  tested:
+    TestApplicationName: TestedVersion  # Example of a tested application and its version
+
+request:  # Optional section for request configuration
+  method: RequestMethod  # HTTP request method (e.g., GET, POST)
+  url: /request-url  # URL path (mandatory if set, should start with '/')
+  expected_status: StatusCode  # Expected HTTP status code or 'ok' for 2XX range
+  redirects: true/false  # Enable/disable following redirects
+  post_data: PostDataContent  # Mandatory if method is POST
+  headers:  # Optional request headers
+    HeaderName: HeaderValue  # Header pairs (e.g., User-Agent)
+
+server: # Optional section
+  body: # Requires at least one tag
+    match_string: 'href="public/build/grafana.dark.'
+
+versions:  # Mandatory section for multiple version checks
+  - name: VersionName  # Mandatory: Unique name of the version being checked
+    description: VersionDescription  # Optional description of the version
+    body:  # Mandatory body for version identification
+      match_regex: RegexPatternToMatch  # Mandatory regex pattern for matching
+      match_string: StringToMatch  # Mandatory string to match in the response
+      extract_regex: ExtractRegexPattern  # Optional regex pattern for extraction
+      extract_any_regex: # Optional OR conditional extraction, requires at least 2 tags or use 'extract_regex' for a single rule
+        - OrExtractRegexPattern1
+        - OrExtractRegexPattern2
+
+arguments: 
+  - name: UniqueArgumentName
+    description: ArgumentDescription
+    request: # Optional, similar to the request tag
+      ...
+    body: # Requires at least one tag if set
+      extract_regex: ExtractRegexPattern
