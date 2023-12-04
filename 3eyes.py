@@ -38,25 +38,24 @@ get_text = {
         'moduleCheck' : 'Only check the yaml module without further execution, default is False '
     },
     'yaml_check' : {
-        'metadata_missing': "\x1b[31m[!] Module Error\x1b[39m: The meta tag structure is incomplete or the version is missing", #+
-        'metadata_version_missing': "\n\x1b[31m[!] Module Error\x1b[39m: The 'version' in meta tag is missing", #+
-        'request_config_format': "\x1b[31m[!] Module Error\x1b[39m: The 'request' tag configuration is empty", #+
-        'unsupported_method': "\x1b[31m[!] Module Error\x1b[39m: The request method '{method}' in the request configuration is not supported", #+
-        'post_data_missing': "\x1b[31m[!] Module Error\x1b[39m: Post data is mandatory if the request method is POST", #+
-        'url_path_incorrect' : "\x1b[31m[!] Module Error\x1b[39m: The 'url' in the request tag must start with a forward slash ('/')", #+
-        'server_config_format' : "\x1b[31m[!] Module Error\x1b[39m: The 'server' tag configuration is empty",
-        'request_structure': "\x1b[31m[!] Module Error\x1b[39m: The 'request' information is empty in {tag} tag", #+
-        #'server_match_string': "\x1b[31m[!] Module Error\x1b[39m: The 'match_string' is missing within 'body' of 'server'.",
-        'versions_missing': "\x1b[31m[!] Module Error\x1b[39m: The version information is missing or improperly structured", #+
-        'version_structure_incomplete': "\x1b[31m[!] Module Error\x1b[39m: The version structure is empty or missing essential elements", #+
-        'missing_name': "\x1b[31m[!] Module Error\x1b[39m: The 'name' dose not exists within the version tag", 
-        'arguments_format': "\x1b[31m[!] Module Error\x1b[39m: The 'arguments' tag configuration is empty",
-        'argument_fields_missing': "\x1b[31m[!] Module Error\x1b[39m: The 'arguments' information is missing {tag} tag",
-        'server_body': "The 'body' tag is missing in the 'server' section.",
-        'body_not_dict': "The 'body' tag should be a dictionary.",
-        'match_string_or_regex_missing': "Neither 'match_string' or 'match_regex' is in the 'body' tag.",
-        'extract_any_regex_not_list': "'extract_any_regex' must be a list. Choose 'extract_regex' for a single rule.",
-        'both_extract_rules_present': "Cannot have both 'extract_regex' and 'extract_any_regex'. Choose one."
+        'root_tag_missing': "\x1b[31m[!] Module Error\x1b[39m: The yaml module '{root}' tag structure is missing", 
+        'root_empty': "\x1b[31m[!] Module Error\x1b[39m: The '{root}' configuration is empty",
+        'root_match_string_or_regex_missing': "\x1b[31m[!] Module Error\x1b[39m: Neither 'match_string' or 'match_regex' is in the body's {tag} tag.",
+        'root_extract_any_regex_not_list': "\x1b[31m[!] Module Error\x1b[39m: The 'extract_any_regex' in the body's '{tag}' must be a list. Choose 'extract_regex' for a single rule.",
+        'tag_empty': "\x1b[31m[!] Module Error\x1b[39m: The '{tag}' tag in '{root}' configuration is empty",
+        'tag_missing': "\n\x1b[31m[!] Module Error\x1b[39m: The '{tag}' tag in '{root}' configuration is missing",
+        'request_unsupported_method': "\x1b[31m[!] Module Error\x1b[39m: The request method '{method}' in the '{root}' configuration is not supported", 
+        'request_unsupported_status_code' : "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}', expected_status should be either 'ok' or an integer between 100 and 599", 
+        'request_unsupported_headers' : "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}', headers should contain at least one header pair", 
+        'request_unsupported_redirects' : "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}', redirects should be a boolean value (True or False)", 
+        'request_post_data_missing': "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}', 'post_data' is mandatory if the request method is POST", 
+        'request_url_path_incorrect' : "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}', the 'url' must start with a forward slash ('/')", 
+        'request_extra_post_data': "\x1b[31m[!] Module Error\x1b[39m: In the '{tag}' section, 'post_data' is not required as the request method is not POST.", 
+        'match_string_or_regex_missing': "\x1b[31m[!] Module Error\x1b[39m: Neither 'match_string' or 'match_regex' is in the {tag}'s '{name}' tag.",
+        'extract_any_regex_not_list': "\x1b[31m[!] Module Error\x1b[39m: The 'extract_any_regex' in the {tag}'s '{name}' body must be a list. Choose 'extract_regex' for a single rule.",
+        'both_extract_rules_present': "\x1b[31m[!] Module Error\x1b[39m: Cannot have both 'extract_regex' and 'extract_any_regex' in the body's '{tag}'. Choose one.",
+        'list_empty': "\x1b[31m[!] Module Error\x1b[39m: The {root} list structure is/are empty",
+        'yaml_format': "\x1b[31m[!] Critical Error\x1b[39m: The yaml format is not supported by this framework because it contain errors"
     },
     'error': {
         'fileNotFound': "\n\n\x1b[31m[!] Input Error\x1b[39m: File '{value}' not found.\n",
@@ -83,226 +82,152 @@ get_text = {
     },
     'aux': {
         'N\A': 'N\A',
-        'ver': 'v0.52 beta'
+        'ver': 'v0.53 beta'
     }
 }
 
-async def check_request_tag_structure(data):
+async def check_request_tag_structure(data, tag):
     request_config = data['request']
     if not isinstance(request_config, dict):
-        return {'status': False, 'msg': get_text['yaml_check']['request_config_format']} 
+        return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='request')} 
 
     # Checking 'method' field
     if 'method' in request_config and request_config['method'].upper() not in ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']:
-        return {'status': False, 'msg': get_text['yaml_check']['unsupported_method'].format(method=request_config['method'])}
-
-    # Checking 'post_data' for 'POST' method
-    if request_config.get('method', '').upper() == 'POST' and 'post_data' not in request_config:
-        return {'status': False, 'msg': get_text['yaml_check']['post_data_missing']}
+        return {'status': False, 'msg': get_text['yaml_check']['request_unsupported_method'].format(method=request_config['method'], root=tag)}
 
     # Checking 'url' field format
     if 'url' in request_config and not request_config.get('url', '').startswith('/'):
-        return {'status': False, 'msg': get_text['yaml_check']['url_path_incorrect']}
+        return {'status': False, 'msg': get_text['yaml_check']['request_url_path_incorrect'].format(tag=tag)}
+
+    # Check 'expected_status' field
+    if 'expected_status' in request_config and request_config.get('expected_status') not in ['ok', *range(100, 600)]:
+        return {'status': False, 'msg': get_text['yaml_check']['request_unsupported_status_code'].format(tag=tag)}
+
+    # Check 'redirects' field
+    if 'redirects' in request_config and not isinstance(request_config.get('redirects'), bool):
+        return {'status': False, 'msg': get_text['yaml_check']['request_unsupported_redirects'].format(tag=tag)}
+
+    # Check 'headers' field
+    if 'headers' in request_config:
+        headers = request_config.get('headers', {})
+        if not isinstance(headers, dict) or len(headers) < 1:
+            return {'status': False, 'msg': get_text['yaml_check']['request_unsupported_headers'].format(tag=tag)}
+
+    # Checking 'post_data' for 'POST' method
+    request_method = request_config.get('method', '').upper()
+    if request_method == 'POST' and 'post_data' not in request_config:
+        return {'status': False, 'msg': get_text['yaml_check']['request_post_data_missing'].format(tag=tag)}
+    if 'post_data' in request_config and not request_method == 'POST':
+        return {'status': False, 'msg': get_text['yaml_check']['request_extra_post_data'].format(tag=tag)}
 
     return {'status': True}
 
-async def check_body_tag_structure(data, tag):
+async def check_body_tag_structure(data, tag, name = False, match_need = True):
+
+    if 'name' in data and not data['name']:
+        return {'status': False, 'msg': get_text['yaml_check']['tag_empty'].format(tag='name' , root=tag)} 
+    
     if 'body' not in data:
-        return {'status': False, 'msg': get_text['yaml_check']['server_body']}  
-    elif not isinstance(data['body'], dict):
-        return {'status': False, 'msg': get_text['yaml_check']['body_not_dict']} 
+        return {'status': False, 'msg': get_text['yaml_check']['tag_missing'].format(tag='body' , root=tag)}  
     
-    elif 'match_string' not in data['body'] and 'match_regex' not in data['body']:
-        print(tag)
-        print(data['body'])
-        return {'status': False, 'msg': get_text['yaml_check']['match_string_or_regex_missing']} 
+    data_body = data['body']
+
+    if not isinstance(data_body, dict):
+        return {'status': False, 'msg': get_text['yaml_check']['tag_empty'].format(tag='body' , root=tag)} 
+
+    elif match_need and 'match_string' not in data_body and 'match_regex' not in data_body:
+        if name:
+            return {'status': False, 'msg': get_text['yaml_check']['match_string_or_regex_missing'].format(tag=tag, name=name)}
+        else:
+            return {'status': False, 'msg': get_text['yaml_check']['root_match_string_or_regex_missing'].format(tag=tag)}
         
-    elif 'extract_any_regex' in data['body'] and not isinstance(data['body']['extract_any_regex'], list):
-        return {'status': False, 'msg': get_text['yaml_check']['extract_any_regex_not_list']} 
-    
-    elif 'extract_regex' in data['body'] and 'extract_any_regex' in data['body']:
-        return {'status': False, 'msg': get_text['yaml_check']['both_extract_rules_present']} 
+    elif 'extract_any_regex' in data_body and (not isinstance(data_body.get('extract_any_regex'), list) or len(data_body.get('extract_any_regex', [])) < 2):
+        if name:
+            return {'status': False, 'msg': get_text['yaml_check']['extract_any_regex_not_list'].format(tag=tag, name=name)}
+        else:
+            return {'status': False, 'msg': get_text['yaml_check']['root_extract_any_regex_not_list'].format(tag=tag)}
+
+    elif 'extract_regex' in data_body and 'extract_any_regex' in data_body:
+        return {'status': False, 'msg': get_text['yaml_check']['both_extract_rules_present'].format(tag=tag)} 
 
     return {'status': True}
+
 
 async def check_yaml_structure(data):
-    # Checking 'meta' section
-    if 'meta' not in data or not isinstance(data['meta'], dict):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_missing']}
-    if not data['meta'].get('version', ''):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_version_missing']}
+    if data:
+        # Checking 'meta' section
+        if 'meta' not in data:
+            return {'status': False, 'msg': get_text['yaml_check']['root_tag_missing'].format(root='meta')}
+        elif not isinstance(data['meta'], dict):
+            return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='meta')}
+        if not data['meta'].get('version', None):
+            return {'status': False, 'msg': get_text['yaml_check']['tag_missing'].format(tag='version' , root='meta')}
 
-    # Checking 'request' section
-    if 'request' in data:
-        if not isinstance(data['request'], dict):
-            return {'status': False, 'msg': get_text['yaml_check']['request_structure']}.format(tag='request')
-        else:
-            request_check = await check_request_tag_structure(data)
-            if not request_check['status']:
-                return request_check
-
-    # Checking 'server' section
-    if 'server' in data:
-        server_config = data['server']
-        if not isinstance(server_config, dict):
-            return {'status': False, 'msg': get_text['yaml_check']['server_config_format']}
-        else:
-            body_check = await check_body_tag_structure(server_config, 'server')
-            if not body_check['status']:
-                return body_check
-
-    # Checking 'versions' section
-    if 'versions' not in data or not isinstance(data['versions'], list):
-        return {'status': False, 'msg': get_text['yaml_check']['versions_missing']}
-    else:
-        for version in data['versions']:
-            if not isinstance(version, dict):
-                return {'status': False, 'msg': get_text['yaml_check']['version_structure_incomplete']}
+        # Checking 'request' section
+        if 'request' in data:
+            if not isinstance(data['request'], dict):
+                return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='request')}
             else:
-                body_check = await check_body_tag_structure(version, 'versions')
+                request_check = await check_request_tag_structure(data, 'request')
+                if not request_check['status']:
+                    return request_check
+
+        # Checking 'server' section
+        if 'server' in data:
+            server_config = data['server']
+            if not isinstance(server_config, dict):
+                return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='server')}
+            else:
+                body_check = await check_body_tag_structure(server_config, 'server')
                 if not body_check['status']:
                     return body_check
 
-    # Checking 'arguments' section
-    if 'arguments' in data:
-        arguments = data['arguments']
-        if not isinstance(arguments, list):
-            return {'status': False, 'msg': get_text['yaml_check']['arguments_format']}
-        
-        for arg in arguments:
-            if not isinstance(arg, dict):
-                return {'status': False, 'msg': get_text['yaml_check']['arguments_format']}
-            
-            # Check for 'name' field in each argument
-            if 'name' not in arg:
-                return {'status': False, 'msg': get_text['yaml_check']['argument_fields_missing'].format(tag="name")}
-            
-            # Check 'request' and 'body' fields if they exist in the argument
-            if 'request' in arg:
-                if not isinstance(arg['request'], dict):
-                    return {'status': False, 'msg': get_text['yaml_check']['request_structure']}.format(tag='arguments')
-                else:
-                    request_check = await check_request_tag_structure(arg)
-                    if not request_check['status']:
-                        return request_check
-
-            if 'body' in arg:
-                if 'extract_regex' not in arg['body']:
-                    print('error in arg, fara extract rule')
-
-    return {'status': True}
-
-
-async def check_yaml_structure2(data):
-    # Checking 'meta' section
-    if 'meta' not in data or not isinstance(data['meta'], dict):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_missing']}
-    if not data['meta'].get('version', ''):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_version_missing']}
-
-    # Checking 'request' section
-    if 'request' in data:
-        if not isinstance(data['request'], dict):
-            return {'status': False, 'msg': get_text['yaml_check']['request_structure']}.format(tag = 'request')
+        # Checking 'versions' section
+        if 'versions' not in data:
+            return {'status': False, 'msg': get_text['yaml_check']['root_tag_missing'].format(root='versions')}
+        if not isinstance(data['versions'], list):
+            return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='versions')}
         else:
-            return check_request_tag_structure(data)
+            for version in data['versions']:
+                if not isinstance(version, dict):
+                    return {'status': False, 'msg': get_text['yaml_check']['list_empty'].format(root='versions')}
+                else:
+                    body_check = await check_body_tag_structure(version, 'versions', version['name'])
+                    if not body_check['status']:
+                        return body_check
 
-    # Checking 'server' section
-    if 'server' in data:
-        server_config = data['server']
-        if not isinstance(server_config, dict):
-            return {'status': False, 'msg': get_text['yaml_check']['server_config_format']} 
-        return check_body_tag_structure(server_config)  
-
-    # Checking 'versions' section
-    if 'versions' not in data or not isinstance(data['versions'], list):
-        return {'status': False, 'msg': get_text['yaml_check']['versions_missing']}
-    else:
-        for version in data['versions']:
-            if not isinstance(version, dict): 
-                return {'status': False, 'msg': get_text['yaml_check']['version_structure_incomplete']}
-
-            return check_body_tag_structure(data['versions'])
-
-
-    # Checking 'arguments' section
-    if 'arguments' in data:
-        arguments = data['arguments']
-        if not isinstance(arguments, list):
-            return {'status': False, 'msg': get_text['yaml_check']['arguments_format']}
-        
-        for arg in arguments:
-            if not isinstance(arg, dict):
-                return {'status': False, 'msg': get_text['yaml_check']['arguments_format']}
+        # Checking 'arguments' section
+        if 'arguments' in data:
+            arguments = data['arguments']
+            if not isinstance(arguments, list):
+                return {'status': False, 'msg': get_text['yaml_check']['root_empty'].format(root='arguments')}
             
-            # Check for 'name' field in each argument
-            if 'name' not in arg:
-                return {'status': False, 'msg': get_text['yaml_check']['argument_fields_missing'].format(tag = "name")}
-            
-            # Check 'request' and 'body' fields if they exist in the argument
-            if 'request' in arg:
-                if not isinstance(arg['request'], dict):
-                    return {'status': False, 'msg': get_text['yaml_check']['request_structure']}.format(tag = 'arguments')
-                elif isinstance(arg['request'], dict):
-                    return check_request_tag_structure(data)
-            
-                return check_body_tag_structure(data['versions'])
+            for arg in arguments:
+                if not isinstance(arg, dict):
+                    return {'status': False, 'msg': get_text['yaml_check']['list_empty'].format(root='arguments')}
+                
+                # Check for 'name' field in each argument
+                if 'name' not in arg:
+                    return {'status': False, 'msg': get_text['yaml_check']['tag_missing'].format(tag='name', root='arguments')}
+                
+                # Check 'request' and 'body' fields if they exist in the argument
+                if 'request' in arg:
+                    if not isinstance(arg['request'], dict):
+                        return {'status': False, 'msg': get_text['yaml_check']['tag_empty'].format(tag='request', root='arguments')}
+                    else:
+                        request_check = await check_request_tag_structure(arg)
+                        if not request_check['status']:
+                            return request_check
 
-    return {'status': True}
-
-
-async def check_yaml_structureBAK(data):
+                if 'body' in arg:
+                    body_check = await check_body_tag_structure(arg, 'arguments', arg['name'], False)
+                    if not body_check['status']:
+                        return body_check
+                    
+        return {'status': True}
     
-    # Checking 'info' section
-    if 'meta' not in data or not isinstance(data['meta'], dict):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_missing']}
-    if not data['meta'].get('version', ''):
-        return {'status': False, 'msg': get_text['yaml_check']['metadata_version_missing']}
-    
-
-    # Checking 'request' section
-    if 'request' in data:
-        request_config = data['request']
-        if not isinstance(request_config, dict):
-            return {'status': False, 'msg': get_text['yaml_check']['request_config_format']}
-        
-        # Checking 'method' field
-        if 'method' in request_config and request_config['method'].upper() not in ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']:
-            return {'status': False, 'msg': get_text['yaml_check']['unsupported_method'].format(method=request_config['method'])}
-        
-        # Checking 'post_data' for 'POST' method
-        if request_config.get('method', '').upper() == 'POST' and 'post_data' not in request_config:
-            return {'status': False, 'msg': get_text['yaml_check']['post_data_missing']}
-        
-        # Checking 'url' field format
-        if 'url' in request_config and not request_config.get('url', '').startswith('/'):
-            return {'status': False, 'msg': get_text['yaml_check']['url_path_incorrect']}
-        
-
-    # Checking 'server' section
-    if 'server' in data:
-        server_config = data['server']
-        if not isinstance(server_config, dict):
-            return {'status': False, 'msg': get_text['yaml_check']['server_config_format']} 
-        elif 'body' not in server_config:
-            return {'status': False, 'msg': get_text['yaml_check']['server_body']}  
-        elif not isinstance(server_config['body'], dict) or 'match_string' not in server_config['body']: #OR mach_regex
-            return {'status': False, 'msg': get_text['yaml_check']['server_match_string']}   
-
-
-    # Checking 'versions' section
-    if 'versions' not in data or not isinstance(data['versions'], list):
-        return {'status': False, 'msg': get_text['yaml_check']['versions_missing']}
     else:
-        for version in data['versions']:
-            if not isinstance(version, dict): 
-                return {'status': False, 'msg': get_text['yaml_check']['version_structure_incomplete']}
-
-            elif 'body' in version:
-                if 'name' not in version:
-                    return {'status': False, 'msg': get_text['yaml_check']['missing_name']}
-
-    return {'status': True}
+        return {'status': False, 'msg': get_text['yaml_check']['yaml_format']}
 
 
 async def get_specificInfo(name, in_TagName, yaml_file):
@@ -317,7 +242,6 @@ async def get_specificInfo(name, in_TagName, yaml_file):
     return {'isOk' : False} 
 
    
-
 def _check_argsI(targets_file):
     try:
         with open(targets_file, 'r') as file:
@@ -337,7 +261,7 @@ def _check_argsST(value):
         raise argparse.ArgumentTypeError(get_text['error']['invalidTimeOutFormat'].format(value=value))
 
 
-def _check_argsM(module_name):
+def _check_argsM(module_name): #TO-DO: return the errors and then handle them
     try:
         module_path = os.path.join("modules", f"{module_name}.yaml")
         with open(module_path, 'r') as file:
@@ -348,9 +272,8 @@ def _check_argsM(module_name):
                 raise ValueError
     except ValueError:
         raise argparse.ArgumentTypeError(get_text['yaml_check']['metadata_version_missing'])
-    # except yaml.YAMLError as exc:
-    #     print(f"Error while parsing YAML file: {exc}")
-    #     return None
+    except yaml.YAMLError:
+        raise argparse.ArgumentTypeError(get_text['yaml_check']['yaml_format'])
     except FileNotFoundError:
         raise argparse.ArgumentTypeError(get_text['error']['moduleFileNotFound'].format(value=module_name))
 
@@ -443,42 +366,28 @@ async def perform_request(url, timeout,  method='GET', yaml_dir='', follow_redir
         # print(.....)
         client.close() # it will bubble up in 'asyncio.run(main())'
 
-async def print_bar(index, total, prt = None): 
+async def print_bar(index, total, prt=None):
     n_bar = 60
     progress = index / total
-    sys.stdout.write('\r\x1b[2K') 
+
+    # Clear the current line
+    sys.stdout.write('\r\x1b[2K')
+
+    # If progress is not 100%, print the progress bar
     if not int(100 * progress) == 100:
         if prt:
             sys.stdout.write(f'{prt}\n')
         sys.stdout.write(f"\x1b[96m[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}% [{index}/{total}]\x1b[39m")
-    elif int(100 * progress) == 100 and prt: 
+
+    # If progress is 100% and prt is not None, print prt
+    elif int(100 * progress) == 100 and prt:
         sys.stdout.write(f'\x1b[2K{prt}')
+
+    # If progress is not 100% and prt is None, clear the line
     else:
         sys.stdout.write(f'\x1b[2K')
+
     sys.stdout.flush()
-
-# async def print_bar(index, total, prt=None):
-#     n_bar = 60
-#     progress = index / total
-
-#     # Clear the current line
-#     sys.stdout.write('\r\x1b[2K')
-
-#     # If progress is not 100%, print the progress bar
-#     if not int(100 * progress) == 100:
-#         if prt:
-#             sys.stdout.write(f'{prt}\n')
-#         sys.stdout.write(f"\x1b[96m[{'=' * int(n_bar * progress):{n_bar}s}] {int(100 * progress)}% [{index}/{total}]\x1b[39m")
-
-#     # If progress is 100% and prt is not None, print prt
-#     elif int(100 * progress) == 100 and prt:
-#         sys.stdout.write(f'\x1b[2K{prt}')
-
-#     # If progress is not 100% and prt is None, clear the line
-#     else:
-#         sys.stdout.write(f'\x1b[2K')
-
-#     sys.stdout.flush()
 
 async def extract_any_regexHelper(extract_any_regex_yaml, response_body):
     if extract_any_regex_yaml:
@@ -811,7 +720,6 @@ async def main(args, urls, start_time, new_ouput_format):
             successful_vers.setdefault(get_data['ver_name'], {})
             successful_vers[get_data['ver_name']][get_data['msg']] = successful_vers[get_data['ver_name']].get(get_data['msg'], 0) + 1
 
-            # print(successful_vers) | {'Grafana OSS': {'7.4.3': 1}}
         elif get_data is None:
             error_messages['AppError'] += 1
         else:
@@ -855,6 +763,17 @@ async def init():
     urls = []
     new_ouput_format = None
     get_YamlFile = args.m
+    dev_mode = False
+
+
+    if args.cm: # TO-DO: ADD STYLE AND ADD TO THE getText
+        dev_mode = True
+        check_yaml = await check_yaml_structure(get_YamlFile)
+        if check_yaml['status']:
+            print('module ok')
+        else:
+            print(check_yaml['msg'])  
+
 
     if sys.stdin.isatty():
         # Terminal mode
@@ -864,7 +783,7 @@ async def init():
             urls.append(args.t)
         elif args.i:
             urls = args.i
-        elif not args.cm:
+        elif not dev_mode:
             print(get_text['error']['invalidTargetInput'])
     else: # TO-DO: need cli desgin
         #print(banner.format(ver=get_text['aux']['ver']))  
@@ -874,14 +793,7 @@ async def init():
             if line == "":
                 break  
             urls.append(line)
-
-
-    if args.cm: # TO-DO: ADD STYLE AND ADD TO THE getText
-        check_yaml = await check_yaml_structure(get_YamlFile)
-        if check_yaml['status']:
-            print('module ok')
-        else:
-            print(check_yaml['msg'])       
+     
 
     if args.sm: 
         get_versionModule = await get_specificInfo(args.sm, 'versions', get_YamlFile)
@@ -894,7 +806,7 @@ async def init():
         new_ouput_format = await prepare_output_format(args.so, get_YamlFile)
 
 
-    if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error' and not args.cm:
+    if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error' and not dev_mode:
         await main(args, urls, start_time, new_ouput_format)
     # else:
     #     print('no init() pass')
