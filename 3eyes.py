@@ -78,6 +78,7 @@ get_text = {
         'statusCode': 'StatusCode',
         'networkError': 'NetworkError',
         'protocol': 'Protocol',
+        'readTimeOut': 'ReadFail',
         'default_outputFormat': "\x1b[32m[-] Found\x1b[39m: {{url}} : '{{name}}' v{{ver}}"
     },
     'aux': {
@@ -347,6 +348,9 @@ async def perform_request(url, timeout,  method='GET', yaml_dir='', follow_redir
 
     # EAFP: It’s Easier to Ask for Forgiveness than Permission
     # https://docs.python.org/3/glossary.html#term-EAFP
+    except httpx.ReadTimeout:
+        return {'isOk': False,'url': normal_urlFormat,'msg': get_text['info']['readTimeOut']}
+    
     except httpx.TimeoutException:
         return {'isOk': False,'url': normal_urlFormat,'msg': get_text['info']['timeOut']}
     
@@ -363,10 +367,10 @@ async def perform_request(url, timeout,  method='GET', yaml_dir='', follow_redir
         return {'isOk': False, 'url': normal_urlFormat, 'msg': f'HTTPError:{e}'}
     
     except KeyboardInterrupt:
-        # print(.....)
         client.close() # it will bubble up in 'asyncio.run(main())'
 
-async def print_bar(index, total, prt=None):
+
+async def print_bar(index, total, prt=None): # TO-DO: Find a progress bar with custom laber and print friendly, maybe 'rich.progress' ?
     n_bar = 60
     progress = index / total
 
@@ -418,9 +422,6 @@ async def check_versions(response, versions): #check_versions(request, args.so['
                 # Extract version number using extract_regex or extract_any_regex
                 extract_regex = re.search(extract_regex_yaml, response_info) if extract_regex_yaml else None
                 any_extract_regex = await extract_any_regexHelper(extract_any_regex_yaml, response_info)
-
-                #print(f'match_string : {match_string} | match_regex : {match_regex}, extract_regex : {extract_regex}')
-                #print(f'extract_match : {extract_match} | any_extract_regex {any_extract_regex}')
 
                  # If match_string or match_regex is found, extract version number
                 if match_string or match_regex:
@@ -785,8 +786,7 @@ async def init():
             urls = args.i
         elif not dev_mode:
             print(get_text['error']['invalidTargetInput'])
-    else: # TO-DO: need cli desgin
-        #print(banner.format(ver=get_text['aux']['ver']))  
+    else: # TO-DO: ADD STYLE AND ADD TO THE getText
         print("Reading and waiting for stdin to finish ...")
         for line in sys.stdin:
             line = line.strip()
@@ -808,9 +808,6 @@ async def init():
 
     if urls and get_YamlFile and not args.sm == 'Not Found' and not new_ouput_format == 'Error' and not dev_mode:
         await main(args, urls, start_time, new_ouput_format)
-    # else:
-    #     print('no init() pass')
-
 
 
 if __name__ == "__main__":

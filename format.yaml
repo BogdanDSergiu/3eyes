@@ -4,7 +4,7 @@ meta:
   version: 1.0  # Mandatory: Version of the module
   author: AuthorName
   home: ModuleHomePage
-  tested:
+  tested: # The lastest updated versions that was tested on
     TestApplicationName: TestedVersion  # Example of a tested application and its version
 
 request:  # Optional section for request configuration
